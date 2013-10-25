@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<script type="text/javascript" src="scripts/underscore-1.4.4.js"> </script>
+		<script type="text/javascript" src="scripts/backbone-0.9.1.js"> </script>
+		<script type="text/javascript" src="scripts/jquery-1.9.1.js"> </script>
+		<link rel="stylesheet" href="global.css" />
+	</head>
+	<body>
+		<div id="summary">
+
+		</div>
+		<div id="content">
+			
+		</div>
+
+	<script type="text/javascript">
+		
+		$(document).ready(function(){
+		
+			//dummy JSON data below, needs to be called through AJAX
+			
+			var JSONObj = [
+				{ "itemName" : "cat_1" , "val": 1011 },
+				{ "itemName" : "cat_2" , "val": 1012 },
+				{ "itemName" : "cat_3" , "val": 1013 },
+				{ "itemName" : "cat_4" , "val": 1014 },
+				{ "itemName" : "cat_5" , "val": 1015 },
+				{ "itemName" : "cat_6" , "val": 1016 },
+				{ "itemName" : "cat_7" , "val": 1017 },
+				{ "itemName" : "cat_8" , "val": 1018 }					
+			]
+			
+			var APP = {};
+			
+			APP.CollectionSummary = Backbone.Collection.extend({
+					
+				initialize: function(){
+					//console.log("app CollectionSummary init...");
+					//this.on( "add", this.addItemSummary, this);
+				},
+				
+				addItemSummary: function(){
+					//alert("asdada");
+					//APP.Controller.addItemToCollection();
+					//debugger;
+				}
+				
+			});
+			
+			APP.Collection = Backbone.Collection.extend({
+					
+				initialize: function(){
+					//console.log("app collection init...");
+				}
+				
+			});
+			
+			APP.Model = Backbone.Model.extend({
+			  			
+				defaults: {
+					"itemName": "default_name",
+					"val": "default_value",
+					"GUID" : "uni_id"
+				},
+				
+				idAttribute : "GUID",
+				
+				initialize: function(){
+					//console.log("model init..");
+				}
+				
+			});
+		
+			APP.View = Backbone.View.extend({
+
+				tagName: "li",
+
+				className: "list-row",
+				
+				elemId: null,
+				
+				el: "",
+				
+				addBtnElem : null,
+				
+				listElem: null,
+			
+				constructor : function(elemId) { 
+					var pvtId = elemId+"_cont";
+					$("#"+elemId).html("<ul id='"+pvtId+"'></ul>");
+					this.el = "#"+pvtId;
+				},
+				
+				addItemEl: function(listItem, data){
+					var that = this;
+					this.listElem = document.createElement("li");
+					this.removeBtnElem = document.createElement("span");
+					this.removeBtnElem.className = "del";
+					this.removeBtnElem.innerHTML = "remove";
+					
+					$(this.removeBtnElem).click(function(){
+						APP.Controller.removeItem(this, listItem, data.GUID);
+					});
+					
+					$(this.listElem).append("<div>"+data.attributes.itemName+"</div>");
+					
+					$(this.listElem).append(this.removeBtnElem);					
+					$(this.el).append(this.listElem);
+				},
+				
+				removeItemEl: function(el){
+					debugger;
+				},
+
+				addContentsEl: function(data) { 
+					debugger;
+					var itemNameElem, itemVal, that, itemDel, listElem;
+					that = this;
+					
+					itemNameElem = "<div class='name'><label>Name :</label> "+data.itemName+"</div>";
+					itemVal = "<div class='val'><label>Value : </label>"+data.val+"</div>";
+					listElem = document.createElement("li");
+					listElem.id = "li_"+data.GUID;
+					this.addBtnElem = document.createElement("span");
+					this.addBtnElem.innerHTML = "add";
+					this.addBtnElem.className = "add";					
+					itemDel = "<span class='del'>remove</span>";
+					
+					$(listElem).append(itemNameElem+itemVal);
+					$(listElem).append(this.addBtnElem);
+					$(this.el).append(listElem);
+
+					$(this.addBtnElem).click(function(){
+						APP.Controller.addItem(this, listElem, data.GUID);						
+					});					
+					
+				}
+
+			});
+		
+			APP.Controller = {
+				
+				collection: null,
+				
+				collectionSummary: null,
+				
+				model: null,
+				
+				view: null,				
+				
+				GUID: 0,
+				
+				elemId: null,
+				
+				summaryView: null,
+				
+						
+				init: function(JSONObj , elemId){					
+					var k;					
+					this.elemId = elemId;					
+					
+					this.collection = new APP.Collection();
+					this.collectionSummary = new APP.CollectionSummary();
+					
+					this.view = new APP.View(this.elemId);					
+					this.summaryView = new APP.View("summary");
+			
+					for(k in JSONObj){					
+						this.model = new APP.Model();
+						JSONObj[k].GUID = this.GUID;						
+						this.model.attributes.id = JSONObj[k].GUID;												
+						this.model.set(JSONObj[k]);								
+						this.collection.add(this.model.attributes);						
+						this.view.addContentsEl(this.model.attributes);												
+						this.GUID = this.GUID+=1;						
+					}					
+										
+				},
+								
+				addItem: function(target, listElem, itemId){
+					var item, isAdded;
+					item = this.collection.get(itemId);
+					isAdded = this.collectionSummary.add(item);	
+					if(isAdded){
+						$(target).hide();
+						$(listElem).addClass("added");
+						this.summaryView.addItemEl(target, item);
+					}
+					else{
+						alert("unable to add : "+itemId);
+					}
+					
+				},
+				
+				removeItem: function(target, listItemBtn , itemId){ 
+					var item, isRemoved;
+					item = this.collectionSummary.get(itemId);
+					isRemoved = this.collectionSummary.remove(item);
+					if(isRemoved){
+						$(listItemBtn).show();
+						$(listItemBtn).parent().removeClass("added");
+						$(target).parent().remove();
+					}
+					else{
+						alert("unable to remove : "+itemId);
+					}
+					
+					debugger;
+					
+				},
+				
+				addItemSummary: function(){ debugger;
+					//console.log("add item summary");
+					this.view.addItemEl();
+					debugger;
+				},
+				
+				removeItemSummary: function(){
+					//console.log("removing summary");
+				}
+				
+			}
+			
+			APP.Controller.init(JSONObj, "content");
+		
+		});
+		
+	</script>
+	</body>
+</html>
